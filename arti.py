@@ -1,15 +1,24 @@
-from numpy import maximum
-from numpy.lib.twodim_base import vander
+from datalog import *
+import mysql.connector
 from neuralmath import *
+import random
 from threading import *
-import time
-import warnings
 
-warnings.filterwarnings('error')
+MIN_VALUE = 0.001 # global minimum value
 
-MIN_VALUE = 0.001
-
+"""
+Arti_1_0: This class contains all data and functions that create and control the AI neural network called Arti. This class is for Arti 1.0.
+This is the first iteration of Arti, which is designed to play Tic-Tac-Toe by selecting a random open square for its next move on its turn,
+while avoiding occupied squares. This iteration has no concept of winning or losing and does not learn. Arti's neural network, in this
+iteration, contains 19 sensory neurons and 1 neuron. The singular neuron is responsible for generating Arti's next random move to an open
+square. Arti_1_0 is a subclass of Thread so that it can run separately from all other program threads.
+"""
 class Arti_1_0(Thread):
+    """
+    Initializes Arti's neural network, which is comprised of 120 neurodes and 273 synapses. It also initializes game state variables that are
+    used as inputs to Arti's sensory neurons.
+    self: object reference
+    """
     def __init__(self):
         super().__init__()
         
@@ -22,10 +31,9 @@ class Arti_1_0(Thread):
                       ' ', ' ', ' ']
         self.xNeuron = []
         self.oNeuron = []
-        self.eNeuron = []
         self.mNeuron = []
         self.tNeuron = SensoryNeuron(soma=SomaticNeurode(activation=SigmoidActivation(1, 10)))
-        self.neuron = Neuron(soma=SomaticNeurode(activation=HardSigmoidActivation(100.5, 2), oscillator=ReverseSawtoothOscillator(0.8, 0.5, -0.05), threshold=1 / 9))
+        self.neuron = Neuron(soma=SomaticNeurode(activation=HardSigmoidActivation(1.5, 2), oscillator=ReverseSawtoothOscillator(0.82, 0.502, -0.02), threshold=0.1))
         self.output = 0
 
         self.tNeuron.soma.synInput[0].config(sign=-1)
@@ -34,20 +42,20 @@ class Arti_1_0(Thread):
         for i in range(9):
             self.xNeuron.append(SensoryNeuron(soma=SomaticNeurode(activation=SigmoidActivation(2.3, 10), oscillator=SawtoothOscillator(1, 0.5, i / 4.5))))
             self.oNeuron.append(SensoryNeuron(soma=SomaticNeurode(activation=SigmoidActivation(2.3, 10), oscillator=SawtoothOscillator(1, 0.5, i / 4.5))))
-            self.mNeuron.append(SensoryNeuron(soma=SomaticNeurode(activation=SigmoidActivation(2.63, 10), oscillator=CosineOscillator(1, 0.9, 0))))
+            self.mNeuron.append(SensoryNeuron(soma=SomaticNeurode(activation=SigmoidActivation(2.3, 10), oscillator=SawtoothOscillator(1, 4.5, 0.53))))
 
-        self.neuron.addDendrite(DendriticNeurode(activation=GaussianActivation(0.22, 0.05), oscillator=CosineOscillator(0.1, 0.9, 0)))
-        self.neuron.connectNeurodes(self.neuron.dendrite[0], self.neuron.soma, weight=100)
-        self.neuron.createSynapse(self.tNeuron.soma, self.neuron.dendrite[0], ExcitatorySynapse(decay=0.1, filter=HighpassFilter()))
+        self.neuron.addDendrite(DendriticNeurode(activation=GaussianActivation(1, 1), oscillator=SawtoothOscillator(0.1, 4.5, 0.55)))
+        self.neuron.connectNeurodes(self.neuron.dendrite[0], self.neuron.soma)
+        self.neuron.createSynapse(self.tNeuron.soma, self.neuron.dendrite[0], InhibitorySynapse(filter=BandpassFilter(1, 10), inputDecay=0.01))
 
         for i in range(9):
-            self.neuron.addDendrite(DendriticNeurode(activation=GaussianActivation(0.014, 0.01)))
-            self.neuron.connectNeurodes(self.neuron.dendrite[i + 1], self.neuron.dendrite[0], weight=100)
+            self.neuron.addDendrite(DendriticNeurode(activation=GaussianActivation(11, 5)))
+            self.neuron.connectNeurodes(self.neuron.dendrite[i + 1], self.neuron.dendrite[0])
             self.neuron.createSynapse(self.mNeuron[i].soma, self.neuron.dendrite[i + 1], ExcitatorySynapse(filter=BandpassFilter(1, 10), inputDecay=0.01))
 
             for j in range(9):
                 if j != i:
-                    self.neuron.createSynapse(self.mNeuron[j].soma, self.neuron.dendrite[i + 1], InhibitorySynapse())
+                    self.neuron.createSynapse(self.mNeuron[j].soma, self.neuron.dendrite[i + 1], InhibitorySynapse(weight=9))
 
             self.neuron.addAxon(AxonalNeurode(activation=HardSigmoidActivation(4.5, 2 / 9), threshold=1 / 9))
             self.neuron.connectNeurodes(self.neuron.soma, self.neuron.axon[i])
@@ -55,16 +63,25 @@ class Arti_1_0(Thread):
 
         for i in range(9):
             for j in range(9):
-                self.neuron.addDendrite(DendriticNeurode(activation=GaussianActivation(1.15, 1 / 9), decay=0.1, oscillator=SawtoothOscillator(1, 0.5, j / 4.5)))
+                self.neuron.addDendrite(DendriticNeurode(activation=GaussianActivation(1.175, 0.05), decay=0.1, oscillator=SawtoothOscillator(1, 0.5, j / 4.5)))
                 self.neuron.connectNeurodes(self.neuron.dendrite[1 + j + ((i + 1) * 9)], self.neuron.dendrite[i + 1], weight=10)
-                self.neuron.createSynapse(self.xNeuron[j].soma, self.neuron.dendrite[1 + j + ((i + 1) * 9)], InhibitorySynapse(weight=100))
-                self.neuron.createSynapse(self.oNeuron[j].soma, self.neuron.dendrite[1 + j + ((i + 1) * 9)], InhibitorySynapse(weight=100))
+                self.neuron.createSynapse(self.xNeuron[j].soma, self.neuron.dendrite[1 + j + ((i + 1) * 9)], InhibitorySynapse(weight=1))
+                self.neuron.createSynapse(self.oNeuron[j].soma, self.neuron.dendrite[1 + j + ((i + 1) * 9)], InhibitorySynapse(weight=1))
+
+        self.dataLog = Arti_1_0_DataLog()
+        self.dataLog.logInputs()
+        self.dataLog.logSoma()
 
         self.lock = Lock()
         self.stopped = True
 
         self.listeners = []
 
+    """
+    This function adds the specified listener to Arti's list of listeners that will receive messages from Arti.
+    self: object reference
+    listener: the listener object to add
+    """
     def addListener(self, listener):
         if listener is not None:
             self.listeners.append(listener)
@@ -72,6 +89,11 @@ class Arti_1_0(Thread):
 
         return False
 
+    """
+    This function removes the specified listener from Arti's list of listeners.
+    self: object reference
+    listener: the listener object to remove
+    """
     def removeListener(self, listener):
         if self.listeners.__contains__(listener):
             self.listeners.remove(listener)
@@ -79,83 +101,131 @@ class Arti_1_0(Thread):
 
         return False
 
+    """
+    This function runs Arti's thread by calling the update function.
+    self: object reference
+    """
     def run(self):
         self.update()
 
+    """
+    This function updates the game state variables that are used as input to Arti's sensory neurons.
+    self: object reference
+    turn: turn X or O
+    moveNum: current move number
+    board: current gameboard state (list of X, O, or empty spaces)
+    """
     def setInput(self, turn, moveNum, board):
         with self.lock:
             self.turn = turn
             self.moveNum = moveNum
             self.board = board
 
+    """
+    This function sets which player Arti will be playing as.
+    self: object reference
+    p: player X or O
+    """
     def setPlayer(self, p):
         with self.lock:
             self.player = 'X' if p == 'X' else 'O'
 
+    """
+    This function sets the stopped flag to stop Arti's thread.
+    self: object reference
+    """
     def stop(self):
         with self.lock:
             self.stopped = True
 
+    """
+    This function processes Arti's neural network on a repeated cycle until Arti is told to stop. Arti also updates his datalog every cycle.
+    self: object reference
+    """
     def update(self):
         with self.lock:
-            self.stopped = False
-
-        while self.stopped == False:
+            self.stopped = False # Reset stopped
+            
+        # Arti's processing loop
+        while not self.stopped:
+            # Set turn neuron inputs
             if self.turn == self.player:
                 self.tNeuron.soma.synInput[0].currentInput = 1
             else:
                 self.tNeuron.soma.synInput[1].currentInput = 1
 
-            self.tNeuron.update(self.time)
+            self.tNeuron.update(self.time) # Process turn neuron
 
+            # For each square
             for i in range(9):
+                # Set move neuron inputs
                 if i == self.moveNum - 1:
                     self.mNeuron[i].soma.synInput[0].currentInput = 1
 
+                # Set X and O neuron inputs
                 if self.board[i] == 'X':
                     self.xNeuron[i].soma.synInput[0].currentInput = 1
                 elif self.board[i] == 'O':
                     self.oNeuron[i].soma.synInput[0].currentInput = 1
 
+                # Process move, X and O neurons
                 self.mNeuron[i].update(self.time)
                 self.xNeuron[i].update(self.time)
                 self.oNeuron[i].update(self.time)
 
+            # Process Arti's main neuron
             self.neuron.update(self.time)
 
+            # Process the axons' synaptic outputs
             for i in range(9):
                 self.neuron.axon[i].synOutput[0].update(self.time, 0)
 
+            # Calculate Arti's final output based on his axons' synaptic outputs
             self.output = 0
-            greatest = 0.0
 
-            for i in range(9):
-                if self.neuron.axon[i].synOutput[0].sum > greatest:
-                    greatest = self.neuron.axon[i].synOutput[0].sum
-                    if greatest > 0.5:
+            if self.turn == self.player:
+                for i in range(9):
+                    if self.neuron.axon[i].synOutput[0].sum == i + 1:
                         self.output = i + 1
 
+            # Update Arti's clock
             self.time += 0.01
 
+            # Inform Arti's listeners of his output, if he has one
             if self.turn == self.player and self.output != 0:
-                print("Arti picked square ", self.output)
-
                 for i in range(len(self.listeners)):
                     self.listeners[i].messageFromArti(ArtiMessage(self.output))
-                    
 
-            else:
-                np.set_printoptions(formatter={'float_kind': '{0:.5f}'.format})
-                print(self.neuron.soma.spike)
+            # Update Arti's datalog
+            self.dataLog.updateLog(self)
 
+"""
+ArtiMessage: This class is used to send Arti's output to all of Arti's listeners.
+"""
 class ArtiMessage:
+    """
+    Initializes Arti's message to contain his current output value.
+    """
     def __init__(self, output):
         self.output = output
 
+"""
+ArtiListener: This class is used to designate objects as listeners of Arti's that will receive his messages. All subclasses must implement the
+messageFromArti function.
+"""
 class ArtiListener:
+    """
+    Empty initializer function.
+    self: object reference
+    """
     def __init__(self):
         pass
 
+    """
+    Processes a message sent from Arti. This is to be implemented by all subclasses.
+    self: object reference
+    message: an ArtiMessage
+    """
     def messageFromArti(self, message):
         pass
 
@@ -192,22 +262,14 @@ class Neuron:
         preNeurode.addSynapticOutput(s)
         postNeurode.addSynapticInput(s)
 
-    def update(self, time):
-        mostAccountability = 0.0
-        occurrenceSum = 0.0
-
+    def update(self, time, initialize=False):
         for i in range(len(self.dendrite)):
-            self.dendrite[i].update(time)
-            if self.dendrite[i].accountability > mostAccountability: mostAccountability = self.dendrite[i].accountability
-            occurrenceSum += self.dendrite[i].occurrence
+            self.dendrite[i].update(time, initialize)
 
-        self.soma.update(time)
+        self.soma.update(time, initialize)
 
         for i in range(len(self.axon)):
-            self.axon[i].update(time)
-
-        for i in range(len(self.dendrite)):
-            self.dendrite[i].scale(mostAccountability, occurrenceSum)
+            self.axon[i].update(time, initialize)
 
 class SensoryNeuron(Neuron):
     def __init__(self, soma=None, nInputs=1):
@@ -225,16 +287,13 @@ class Neurode:
     MULTIPLY_FUNCTION = 'multiply'
     DEF_THRESHOLD = 0.9
 
-    def __init__(self, activation=None, decay=DEF_DECAY, learnFunc=None, oscillator=None, threshold=DEF_THRESHOLD):
-        self.accountability = 1.0
+    def __init__(self, activation=None, decay=DEF_DECAY, oscillator=None, threshold=DEF_THRESHOLD):
         self.activation = SigmoidActivation() if activation is None else activation
         self.backpropagated = 0.0
         self.bpFrequency = 0.0
         self.decay = decay
         self.frequency = 0.0
-        self.learnFunc = LearningFunction() if learnFunc is None else learnFunc
         self.next = []
-        self.occurrence = 1.0
         self.oscillator = Oscillator() if oscillator is None else oscillator
         self.output = 0.0
         self.previous = []
@@ -282,13 +341,12 @@ class Neurode:
         return False
 
     def backpropagate(self, spike):
-        bp = spike * self.accountability * self.occurrence
+        bp = spike
         if bp > self.backpropagated: self.backpropagated = bp
 
-    def config(self, activation=None, decay=None, learnFunc=None, oscillator=None, threshold=None):
+    def config(self, activation=None, decay=None, oscillator=None, threshold=None):
         if activation is not None: self.activation = activation
         if decay is not None: self.decay = decay
-        if learnFunc is not None: self.learnFunc = learnFunc
         if oscillator is not None: self.oscillator = oscillator
         if threshold is not None: self.threshold = threshold
 
@@ -315,13 +373,6 @@ class Neurode:
 
         return False
 
-    def scale(self, mostAccountability, occurrenceSum):
-        if self.accountability >= MIN_VALUE:
-            self.accountability /= mostAccountability if mostAccountability >= 1.0 else 1.0
-
-        if self.occurrence >= MIN_VALUE:
-            self.occurrence /= occurrenceSum if occurrenceSum >= 1.0 else 1.0
-
     def setPrevious(self, index, neurode=None, func=None, weight=None):
         if index >= 0 and index < len(self.previous):
             if neurode is not None:
@@ -333,12 +384,12 @@ class Neurode:
             if weight is not None:
                 self.prevWeight[index] = weight
 
-    def update(self, time):
+    def update(self, time, initialize=False):
         return 0.0
 
 class DendriticNeurode(Neurode):
-    def __init__(self, activation=None, decay=Neurode.DEF_DECAY, learnFunc=None, oscillator=None, threshold=Neurode.DEF_THRESHOLD):
-        super().__init__(GaussianActivation() if activation is None else activation, decay, learnFunc, oscillator, threshold)
+    def __init__(self, activation=None, decay=Neurode.DEF_DECAY, oscillator=None, threshold=Neurode.DEF_THRESHOLD):
+        super().__init__(GaussianActivation() if activation is None else activation, decay, oscillator, threshold)
 
     def addNext(self, neurode):
         if neurode is not None and len(self.next) < 1:
@@ -347,83 +398,13 @@ class DendriticNeurode(Neurode):
 
         return False
 
-    def update(self, time):
-        mostAccountability = 0.0
-        occurrenceSum = 0.0
+    def update(self, time, initialize=False):
         add = 0.0
         adders = 0
         mul = 0.0
         multipliers = 0
-
-        self.sum *= self.decay
-        self.sum += self.oscillator.update(time) + self.backpropagated
-
-        self.refractory = max(0, self.refractory - 0.1)
-
-        for i in range(len(self.previous)):
-            self.previous[i].backpropagate(self.spike)
-
-            if self.prevFunc[i] == Neurode.ADD_FUNCTION:
-                add += self.previous[i].spike * self.prevWeight[i] * self.previous[i].accountability * self.previous[i].occurrence
-                adders += 1
-            else:
-                mul += self.previous[i].spike * self.prevWeight[i] * self.previous[i].accountability * self.previous[i].occurrence
-                multipliers += 1
-
-        if adders > 0:
-            self.sum += add
-
-        if multipliers > 0:
-            self.sum *= mul / multipliers
-
-        for i in range(len(self.synInput)):
-            self.sum += self.synInput[i].update(time, self.spike + self.backpropagated)
-            if self.synInput[i].accountability > mostAccountability: mostAccountability = self.synInput[i].accountability
-            occurrenceSum += self.synInput[i].occurrence
-            
-        for i in range(len(self.synInput)):
-            self.synInput[i].scale(mostAccountability, occurrenceSum)
-            
-        self.output = self.activation.update(self.sum)
-        self.spike = self.output // (self.threshold + self.refractory)
-        self.refractory += self.spike * 0.1
-
-        if self.spike > 0.0:
-            self.spikeCount += self.spike
-        else:
-            self.spikeCount = 0
-
-        for i in range(len(self.synOutput)):
-            self.synOutput[i].setCurrentInput(self.spike + self.backpropagated)
-            
-        if self.backpropagated > 0.0: 
-            self.bpFrequency = time - self.prevBpSpikeTime
-            self.prevBpSpikeTime = time
-
-        if self.spike > 0.0:
-            self.frequency = time - self.prevSpikeTime
-            self.prevSpikeTime = time
-
-        self.accountability = max(MIN_VALUE, self.accountability + 
-                                  self.learnFunc.learn(max(-1, min(1, self.prevBpSpikeTime - self.prevSpikeTime))) * self.prevSum * self.backpropagated)
-        self.occurrence = max(MIN_VALUE, self.occurrence + self.learnFunc.learn(max(-1, min(1, self.prevBpSpikeTime - self.prevSpikeTime))) * self.backpropagated)
-
-        self.prevSum = self.sum
-        self.backpropagated = 0.0
-
-        return self.spike
-
-class SomaticNeurode(Neurode):
-    def __init__(self, activation=None, decay=Neurode.DEF_DECAY, oscillator=None, threshold=Neurode.DEF_THRESHOLD):
-        super().__init__(activation=SigmoidActivation(sensitivity=np.exp(np.pi)) if activation is None else activation, decay=decay, oscillator=oscillator, threshold=threshold)
-
-    def update(self, time):
-        mostAccountability = 0.0
-        occurrenceSum = 0.0
-        add = 0.0
-        adders = 0
-        mul = 0.0
-        multipliers = 0
+        synIn = 0.0
+        noise = (random.random() - 0.5) * 0.01
 
         self.sum *= self.decay
         self.sum += self.oscillator.update(time) + self.backpropagated
@@ -447,28 +428,88 @@ class SomaticNeurode(Neurode):
             self.sum *= mul / multipliers
 
         for i in range(len(self.synInput)):
-            self.sum += self.synInput[i].update(time, self.spike + self.backpropagated)
-            if self.synInput[i].accountability > mostAccountability: mostAccountability = self.synInput[i].accountability
-            occurrenceSum += self.synInput[i].occurrence
+            synIn = self.synInput[i].update(time, self.spike + self.backpropagated)
 
-        for i in range(len(self.synInput)):
-            self.synInput[i].scale(mostAccountability, occurrenceSum)
-
+            if self.synInput[i].permanence > 0.0: 
+                self.sum += synIn
+            
         self.output = self.activation.update(self.sum)
-        self.spike = self.output // (self.threshold + self.refractory)
+        self.spike = 1.0 if initialize else self.output // (self.threshold + self.refractory)
         self.refractory += self.spike * 0.1
 
         if self.spike > 0.0:
             self.spikeCount += self.spike
+            self.frequency = time - self.prevSpikeTime
+            self.prevSpikeTime = time
+            self.sum = 0.0
         else:
             self.spikeCount = 0
 
-        if self.spike > 0.0:
-            self.frequency = time - self.prevSpikeTime
-            self.prevSpikeTime = time
-
         for i in range(len(self.synOutput)):
             self.synOutput[i].setCurrentInput(self.spike + self.backpropagated)
+            
+        if self.backpropagated > 0.0: 
+            self.bpFrequency = time - self.prevBpSpikeTime
+            self.prevBpSpikeTime = time
+
+        self.prevSum = self.sum
+        self.backpropagated = 0.0
+
+        return self.spike
+
+class SomaticNeurode(Neurode):
+    def __init__(self, activation=None, decay=Neurode.DEF_DECAY, oscillator=None, threshold=Neurode.DEF_THRESHOLD):
+        super().__init__(activation=SigmoidActivation(sensitivity=np.exp(np.pi)) if activation is None else activation, decay=decay, oscillator=oscillator, threshold=threshold)
+
+    def update(self, time, initialize=False):
+        add = 0.0
+        adders = 0
+        mul = 0.0
+        multipliers = 0
+        synIn = 0.0
+        noise = (random.random() - 0.5) * 0.01
+
+        self.sum *= self.decay
+        self.sum += self.oscillator.update(time)
+
+        self.refractory = max(0, self.refractory - 0.1)
+
+        for i in range(len(self.previous)):
+            self.previous[i].backpropagate(self.spike)
+
+            if self.prevFunc[i] == Neurode.ADD_FUNCTION:
+                add += self.previous[i].spike * self.prevWeight[i]
+                adders += 1
+            else:
+                mul += self.previous[i].spike * self.prevWeight[i]
+                multipliers += 1
+
+        if adders > 0:
+            self.sum += add
+
+        if multipliers > 0:
+            self.sum *= mul / multipliers
+
+        for i in range(len(self.synInput)):
+            synIn = self.synInput[i].update(time, self.spike)
+
+            if self.synInput[i].permanence > 0.0: 
+                self.sum += synIn
+
+        self.output = self.activation.update(self.sum)
+        self.spike = 1.0 if initialize else self.output // (self.threshold + self.refractory)
+        self.refractory += self.spike * 0.1
+
+        if self.spike > 0.0:
+            self.spikeCount += self.spike
+            self.frequency = time - self.prevSpikeTime
+            self.prevSpikeTime = time
+            self.sum = 0.0
+        else:
+            self.spikeCount = 0
+
+        for i in range(len(self.synOutput)):
+            self.synOutput[i].setCurrentInput(self.spike)
 
         self.prevSum = self.sum
         self.backpropagated = 0.0
@@ -489,13 +530,12 @@ class AxonalNeurode(Neurode):
 
         return False
 
-    def update(self, time):
-        mostAccountability = 0.0
-        occurrenceSum = 0.0
+    def update(self, time, initialize=False):
         add = 0.0
         adders = 0
         mul = 0.0
         multipliers = 0
+        synIn = 0.0
 
         self.sum *= self.decay
         self.sum += self.oscillator.update(time) + self.backpropagated
@@ -506,10 +546,10 @@ class AxonalNeurode(Neurode):
             self.previous[i].backpropagate(self.spike)
 
             if self.prevFunc[i] == Neurode.ADD_FUNCTION:
-                add += self.previous[i].spike * self.prevWeight[i] * self.previous[i].accountability * self.previous[i].occurrence
+                add += self.previous[i].spike * self.prevWeight[i]
                 adders += 1
             else:
-                mul += self.previous[i].spike * self.prevWeight[i] * self.previous[i].accountability * self.previous[i].occurrence
+                mul += self.previous[i].spike * self.prevWeight[i]
                 multipliers += 1
 
         if adders > 0:
@@ -519,25 +559,22 @@ class AxonalNeurode(Neurode):
             self.sum *= mul / multipliers
 
         for i in range(len(self.synInput)):
-            self.sum += self.synInput[i].update(time, self.spike + self.backpropagated)
-            if self.synInput[i].accountability > mostAccountability: mostAccountability = self.synInput[i].accountability
-            occurrenceSum += self.synInput[i].occurrence
+            synIn = self.synInput[i].update(time, self.spike + self.backpropagated)
 
-        for i in range(len(self.synInput)):
-            self.synInput[i].scale(mostAccountability, occurrenceSum)
+            if self.synInput[i].permanence > 0.0: 
+                self.sum += synIn
 
         self.output = self.activation.update(self.sum)
-        self.spike = self.output // (self.threshold + self.refractory)
+        self.spike = 1.0 if initialize else self.output // (self.threshold + self.refractory)
         self.refractory += self.spike * 0.1
 
         if self.spike > 0.0:
             self.spikeCount += self.spike
-        else:
-            self.spikeCount = 0
-
-        if self.spike > 0.0:
             self.frequency = time - self.prevSpikeTime
             self.prevSpikeTime = time
+            self.sum = 0.0
+        else:
+            self.spikeCount = 0
 
         for i in range(len(self.synOutput)):
             self.synOutput[i].setCurrentInput(self.spike + self.backpropagated)
@@ -690,13 +727,12 @@ class Synapse:
     DEF_WEIGHT = 1.0
 
     def __init__(self, decay=DEF_DECAY, weight=DEF_WEIGHT, learnFunc=None):
-        self.accountability = 1.0
         self.currentInput = 0.0
         self.decay = decay
         self.frequency = 0.0
         self.input = []
-        self.learnFunc = LearningFunction() if learnFunc is None else learnFunc
-        self.occurrence = 1.0
+        self.learnFunc = learnFunc
+        self.permanence = 1.0
         self.prevInput = 0.0
         self.prevInputTime = 0.0
         self.prevSpikeTime = 0.0
@@ -723,13 +759,6 @@ class Synapse:
     def inputSize(self):
         return len(self.input)
 
-    def scale(self, mostAccountability, occurrenceSum):
-        if self.accountability >= MIN_VALUE:
-            self.accountability /= mostAccountability if mostAccountability >= 1.0 else 1.0
-
-        if self.occurrence >= MIN_VALUE:
-            self.occurrence /= occurrenceSum if occurrenceSum >= 1.0 else 1.0
-
     def setCurrentInput(self, x):
         self.currentInput = x
 
@@ -755,7 +784,7 @@ class SensorySynapse(Synapse):
 
         if weight is not None: self.weight = weight
 
-        if learnFunc is not None: self.learnFunc = learnFunc
+        self.learnFunc = learnFunc
 
         if sign is not None: self.sign = 1 if sign >= 0 else -1
 
@@ -815,12 +844,9 @@ class ExcitatorySynapse(NeuralSynapse):
             self.sum += self.input[i].update(time)
             if self.input[i].getInput() < MIN_VALUE: 
                 self.input.pop(i)
-
-        self.sum *= self.accountability * self.occurrence
-
-        self.accountability = max(MIN_VALUE, self.accountability + 
-                                  self.learnFunc.learn(max(-1, min(1, self.prevSpikeTime - self.prevInputTime))) * self.prevInput * spike)
-        self.occurrence = max(MIN_VALUE, self.occurrence + self.learnFunc.learn(max(-1, min(1, self.prevSpikeTime - self.prevInputTime))) * spike)
+        
+        if self.learnFunc is not None:
+            self.permanence = max(0.0, self.permanence + ((self.learnFunc.learn(self.prevSpikeTime - self.prevInputTime)) * spike))
 
         self.prevInput = filtered
 
@@ -853,11 +879,8 @@ class InhibitorySynapse(NeuralSynapse):
             if self.input[i].getInput() < MIN_VALUE: 
                 self.input.pop(i)
 
-        self.sum *= self.accountability * self.occurrence
-
-        self.accountability = max(MIN_VALUE, self.accountability + 
-                                  self.learnFunc.learn(max(-1, min(1, self.prevSpikeTime - self.prevInputTime))) * self.prevInput * spike)
-        self.occurrence = max(MIN_VALUE, self.occurrence + self.learnFunc.learn(max(-1, min(1, self.prevSpikeTime - self.prevInputTime))) * spike)
+        if self.learnFunc is not None:
+            self.permanence = max(0.0, self.permanence + ((self.learnFunc.learn(self.prevSpikeTime - self.prevInputTime)) * spike))
 
         self.prevInput = filtered
 
