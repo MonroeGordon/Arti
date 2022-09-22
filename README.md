@@ -1,7 +1,10 @@
 # Python
-Python repository
 
-This repository contains projects I am developing in Python. I have currently created a Tic-Tac-Toe game that you can play against an AI I call Arti. In the current iteration, Arti plays random moves on empty spaces. He does not learn. His neural network consists of 19 sensory neurons to provide input to a single neuron that makes a random move based on the available empty spaces. Arti runs on a separate thread and is always on while the program is running. 
+This repository contains projects I am developing in Python. 
+
+Arti 1.0
+
+I have currently created a Tic-Tac-Toe game that you can play against an AI I call Arti. In the current iteration, Arti plays random moves on empty spaces. He does not learn. His neural network consists of 19 sensory neurons to provide input to a single neuron that makes a random move based on the available empty spaces. Arti runs on a separate thread and is always on while the program is running. 
 
 During the entire runtime, Arti is logging his data that gets written to an Excel file when you exit the program. The current log settings have him logging the game state inputs and the data from the somatic neurode of his single neuron. The Arti_1_0_Datalog class contains several functions to control what neural data Arti logs. The setup for his data logging is set at the end of his init function.
 
