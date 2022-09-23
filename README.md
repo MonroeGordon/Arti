@@ -1,6 +1,6 @@
-# Python
+# Arti
 
-This repository contains projects I am developing in Python. 
+This repository contains iterations of Arti, a spiking neural network AI.
 
 Arti 1.0
 
