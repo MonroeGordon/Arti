@@ -12,7 +12,7 @@ Arti's neural network is modeled after human neurons. A neuron inside his neural
 
 Artilab
 
-**Important Note: files for this project include source and header files for the Dear ImGui library. This library is used for creating the GUI of the program. My program uses the OpenGL 3 backend for ImGui. OpenGL files are not included in this repository, nor are any static or dynamic libraries. To setup this project for yourself, you will need to know how to setup and incorporate ImGui and OpenGL into the project.**
+**Important Note: files for this project include source and header files for the Dear ImGui library. This library is used for creating the GUI of the program. My program uses the OpenGL 3 backend for ImGui. I have also included images used by the program. OpenGL files are not included in this repository, nor are any static or dynamic libraries. To setup this project for yourself, you will need to know how to setup and incorporate ImGui and OpenGL into the project.**
 
 Artilab is a software program I am developing in C++ to allow me to design, test and work with Arti. Arti will always be running in the background of this program. Ideally, when Arti is built with the capabilities, I'll be able to chat with Arti and have him help me work the program. Currently, I've developed several Arti Viewers that allow me to see his neural matrices in several different ways (tree, matrix, and table views currently). I will be developing editors that I will use for designing and constructing Arti's neural matrices. Also, there will be various virtual environments that I will use for testing Arti. Currently, Tic-Tac-Toe is being constructed for use with Arti. Afterwards, I will have Arti learn to play Chess.
 
